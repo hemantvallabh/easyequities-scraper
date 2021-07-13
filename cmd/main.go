@@ -13,5 +13,8 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Println(authToken)
+
+	if err = easyequities.Accounts(authToken); err != nil {
+		log.Fatal(err)
+	}
 }
