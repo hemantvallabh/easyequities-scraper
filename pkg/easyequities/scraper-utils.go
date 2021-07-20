@@ -88,3 +88,27 @@ func evaluateScrapingResponse(response *scrapingResponse, urlPath string) error 
 
 	return nil
 }
+
+func extractValue(key string, data []map[string]interface{}) interface{} {
+
+	for _, m := range data {
+		labelName, ok := m[labelKey]
+		if ok {
+			if labelName == key {
+				v, ok := m[valueKey]
+				if ok {
+					return v
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func str(t interface{}) string{
+	if t == nil {
+		return ""
+	}
+
+	return t.(string)
+}

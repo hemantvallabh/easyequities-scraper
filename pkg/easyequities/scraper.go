@@ -70,10 +70,10 @@ func login(username string, password string) (cookies map[string]string, err err
 	return nil, err
 }
 
-func equityPage(cookies map[string]string) ([]account, error) {
+func equityPage(cookies map[string]string) ([]accountIdentifier, error) {
 
 	var scrapingResponse scrapingResponse
-	var accounts = make([]account, 0)
+	var identifiers = make([]accountIdentifier, 0)
 	var urlPath = "/Equity"
 
 	c := getCollyInstanceWithCookies(baseUrl, cookies)
@@ -87,12 +87,11 @@ func equityPage(cookies map[string]string) ([]account, error) {
 			selectorTab := trustAccount.DOM.Find("#selector-tab")
 			if selectorTab.Nodes != nil {
 
-				account := account{}
-				account.accountId, _ = selectorTab.Attr("data-id")
-				account.currencyId, _ = selectorTab.Attr("data-tradingcurrencyid")
-				account.description = selectorTab.Find("#trust-account-types").Text()
+				identifier := accountIdentifier{}
+				identifier.AccountId, _ = selectorTab.Attr("data-id")
+				identifier.CurrencyId, _ = selectorTab.Attr("data-tradingcurrencyid")
 
-				accounts = append(accounts, account)
+				identifiers = append(identifiers, identifier)
 			}
 		})
 
@@ -116,7 +115,7 @@ func equityPage(cookies map[string]string) ([]account, error) {
 		return nil, err
 	}
 
-	return accounts, nil
+	return identifiers, nil
 }
 
 func checkCurrencyAvailable(cookies map[string]string, currencyId string) (bool, error){
@@ -135,7 +134,6 @@ func checkCurrencyAvailable(cookies map[string]string, currencyId string) (bool,
 		if err := json.Unmarshal(r.Body, &response); err != nil {
 			scrapingResponse.err = err
 		}
-
 		scrapingResponse.scrapCompleted = true
 	})
 
@@ -185,7 +183,7 @@ func selectAccount(cookies map[string]string, accountId string) error {
 	}
 
 	// Visit the page
-	if err = c.Visit(url); err != nil {
+	if err = c.Post(url, nil); err != nil {
 		return err
 	}
 	c.Wait()
@@ -198,39 +196,46 @@ func selectAccount(cookies map[string]string, accountId string) error {
 	return nil
 }
 
-func accountOverviewPage (cookies map[string]string, accountId string) (accountOverview, error) {
+func accountOverviewPage (cookies map[string]string, accountId string) (trustAccountValuation, error) {
 
-	var overview accountOverview
+	var accountValuation trustAccountValuation
 	var scrapingResponse scrapingResponse
-	var urlPath = "/Menu/UpdateCurrency"
+	var urlPath = "/AccountOverview/GetTrustAccountValuations"
 
 	c := getCollyInstanceWithCookies(baseUrl, cookies)
 
 	handleScrapingError(c, &scrapingResponse)
 	handleScrapingResponse(c, &scrapingResponse)
 
-	c.OnHTML("body > div.container.container-margin.container-min-height > div.mobile-margin-top-15 > div.text-center.holdings-slider-header.control-margin-bottom-large.account-overview-heading > div > h3 > span", func(element *colly.HTMLElement) {
-		overview.accountNumber = element.Text
+	c.OnResponse(func(response *colly.Response) {
+
+		rawJson, err := strconv.Unquote(string(response.Body))
+		if err != nil {
+			scrapingResponse.err = err
+		} else {
+			if err := json.Unmarshal([]byte(rawJson), &accountValuation); err != nil {
+				scrapingResponse.err = err
+			}
+			scrapingResponse.scrapCompleted = true
+		}
 	})
 
 	// Build URL
-	url, err := urlBuilder(urlPath, map[string]string{
-		"trustAccountId": accountId,
-	})
+	url, err := urlBuilder(urlPath, nil)
 	if err != nil {
-		return accountOverview{}, err
+		return trustAccountValuation{}, err
 	}
 
 	// Visit the page
 	if err = c.Visit(url); err != nil {
-		return accountOverview{}, err
+		return trustAccountValuation{}, err
 	}
 	c.Wait()
 
 	// Check response
 	if err := evaluateScrapingResponse(&scrapingResponse, urlPath); err != nil {
-		return accountOverview{}, err
+		return trustAccountValuation{}, err
 	}
 
-	return overview, nil
+	return accountValuation, nil
 }
