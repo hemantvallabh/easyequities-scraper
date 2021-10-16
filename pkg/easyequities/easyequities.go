@@ -19,6 +19,16 @@ func Authentication(username string, password string) (string, error) {
 	return authToken, nil
 }
 
+func Logout(authToken string) error {
+
+	cookies, err := decodeFromAuthToken(authToken)
+	if err != nil {
+		return err
+	}
+
+	return logout(cookies)
+}
+
 func Accounts(authToken string) ([]Account, error) {
 
 	accounts := make([]Account, 0)

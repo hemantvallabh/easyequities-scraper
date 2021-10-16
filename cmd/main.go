@@ -15,6 +15,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	log.Println("Authenticated")
 
 	// Get all accounts
 	accounts, err := easyequities.Accounts(authToken)
@@ -44,6 +45,12 @@ func main() {
 			log.Fatal(err)
 		}
 	}
+
+	err = easyequities.Logout(authToken)
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Println("Logout successful")
 
 	// todo: holding, per account
 	// todo: all available stocks

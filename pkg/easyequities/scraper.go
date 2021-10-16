@@ -70,6 +70,40 @@ func login(username string, password string) (cookies map[string]string, err err
 	return nil, err
 }
 
+func logout(cookies map[string]string) error {
+
+	var scrapingResponse scrapingResponse
+	var urlPath = "/Account/SignOut"
+
+	c := getCollyInstanceWithCookies(baseUrl, cookies)
+
+	handleScrapingError(c, &scrapingResponse)
+	handleScrapingResponse(c, &scrapingResponse)
+
+	c.OnResponse(func(r *colly.Response) {
+		scrapingResponse.scrapCompleted = true
+	})
+
+	// Build URL
+	url, err := urlBuilder(urlPath, nil)
+	if err != nil {
+		return err
+	}
+
+	// Visit the page
+	if err = c.Visit(url); err != nil {
+		return err
+	}
+	c.Wait()
+
+	// Check response
+	if err := evaluateScrapingResponse(&scrapingResponse, "/Account/SignIn"); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func equityPage(cookies map[string]string) ([]accountIdentifier, error) {
 
 	var scrapingResponse scrapingResponse
