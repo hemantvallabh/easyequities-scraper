@@ -46,3 +46,10 @@ type trustAccountValuation struct {
 	AccrualIncomeSummaryItems  []map[string]interface{}
 	AccrualExpenseSummaryItems []map[string]interface{}
 }
+
+type documentInformation struct {
+	Url         string
+	FileName    string
+	Description string
+	Type        DocumentType
+}

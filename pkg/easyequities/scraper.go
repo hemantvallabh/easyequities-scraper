@@ -118,7 +118,7 @@ func equityPage(cookies map[string]string) ([]accountIdentifier, error) {
 	return identifiers, nil
 }
 
-func checkCurrencyAvailable(cookies map[string]string, currencyId string) (bool, error){
+func checkCurrencyAvailable(cookies map[string]string, currencyId string) (bool, error) {
 
 	var scrapingResponse scrapingResponse
 	var urlPath = "/Menu/CanUseSelectedAccount"
@@ -140,7 +140,7 @@ func checkCurrencyAvailable(cookies map[string]string, currencyId string) (bool,
 	// Build URL
 	url, err := urlBuilder(urlPath, map[string]string{
 		"tradingCurrencyId": currencyId,
-		"_": strconv.FormatInt(time.Now().Unix(), 10),
+		"_":                 strconv.FormatInt(time.Now().Unix(), 10),
 	})
 	if err != nil {
 		return false, err
@@ -196,7 +196,7 @@ func selectAccount(cookies map[string]string, accountId string) error {
 	return nil
 }
 
-func accountOverviewPage (cookies map[string]string, accountId string) (trustAccountValuation, error) {
+func accountOverviewPage(cookies map[string]string, accountId string) (trustAccountValuation, error) {
 
 	var accountValuation trustAccountValuation
 	var scrapingResponse scrapingResponse
@@ -238,4 +238,121 @@ func accountOverviewPage (cookies map[string]string, accountId string) (trustAcc
 	}
 
 	return accountValuation, nil
+}
+
+func statementPage(cookies map[string]string) ([]documentInformation, error) {
+
+	var scrapingResponse scrapingResponse
+	var urlPath = "/Statement"
+
+	docs := make([]documentInformation, 0)
+	c := getCollyInstanceWithCookies(baseUrl, cookies)
+
+	handleScrapingError(c, &scrapingResponse)
+	handleScrapingResponse(c, &scrapingResponse)
+
+	c.OnHTML("#TaxReportWebForm", func(reports *colly.HTMLElement) {
+
+		// Extract all tax certificates
+		reports.ForEach("#TaxCertificates > div > div > table > tbody > tr", func(i int, element *colly.HTMLElement) {
+
+			descriptionSelector := element.DOM.Find("tr > td.nowrap")
+			downloadSelector := element.DOM.Find("tr > td > a")
+
+			if descriptionSelector.Nodes != nil && downloadSelector.Nodes != nil {
+				description := descriptionSelector.Text()
+				url, _ := downloadSelector.Attr("data-url")
+				fileName, _ := downloadSelector.Attr("data-filename")
+
+				docs = append(docs, documentInformation{
+					Url:         url,
+					FileName:    fileName,
+					Description: description,
+					Type:        TaxCertificate,
+				})
+			}
+		})
+
+		// Extract all statement documents
+		reports.ForEach("#Statements > div > div > table > tbody > tr", func(i int, element *colly.HTMLElement) {
+
+			descriptionSelector := element.DOM.Find("tr > td.nowrap")
+			downloadSelector := element.DOM.Find("tr > td > a")
+
+			if descriptionSelector.Nodes != nil && downloadSelector.Nodes != nil {
+				description := descriptionSelector.Text()
+				url, _ := downloadSelector.Attr("data-url")
+				fileName, _ := downloadSelector.Attr("data-filename")
+
+				docs = append(docs, documentInformation{
+					Url:         url,
+					FileName:    fileName,
+					Description: description,
+					Type:        Statement,
+				})
+			}
+		})
+
+		scrapingResponse.scrapCompleted = true
+	})
+
+	// Build URL
+	url, err := urlBuilder(urlPath, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	// Visit the page
+	if err = c.Visit(url); err != nil {
+		return nil, err
+	}
+	c.Wait()
+
+	// Check response
+	if err := evaluateScrapingResponse(&scrapingResponse, urlPath); err != nil {
+		return nil, err
+	}
+
+	return docs, nil
+}
+
+func downloadStatement(cookies map[string]string, documentUrl string) ([]byte, error){
+
+	var file []byte
+	var scrapingResponse scrapingResponse
+	urlPath, _, accountNumber, err :=  decodeDocumentUrl(documentUrl)
+	if err != nil {
+		return nil, err
+	}
+
+	c := getCollyInstanceWithCookies(baseUrl, cookies)
+
+	handleScrapingError(c, &scrapingResponse)
+	handleScrapingResponse(c, &scrapingResponse)
+
+	c.OnResponse(func(r *colly.Response) {
+		file = r.Body
+		scrapingResponse.scrapCompleted = true
+	})
+
+	// Build URL
+	url, err := urlBuilder(urlPath, map[string]string{
+		"accountNumber": accountNumber,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	// Visit the page
+	if err = c.Visit(url); err != nil {
+		return nil, err
+	}
+	c.Wait()
+
+	// Check response
+	if err := evaluateScrapingResponse(&scrapingResponse, urlPath); err != nil {
+		return nil, err
+	}
+
+	return file, nil
 }

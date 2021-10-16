@@ -1,5 +1,7 @@
 package easyequities
 
+import "time"
+
 type Account struct {
 	AccountToken    string
 	AccountName     string
@@ -16,4 +18,12 @@ type Account struct {
 		UnsettledCash       string
 		LockedFunds         string
 	}
+}
+
+type Document struct {
+	Date          time.Time
+	Type          DocumentType
+	DocumentToken string
+	AccountNumber string
+	FileName      string
 }

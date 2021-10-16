@@ -105,7 +105,7 @@ func extractValue(key string, data []map[string]interface{}) interface{} {
 	return nil
 }
 
-func str(t interface{}) string{
+func str(t interface{}) string {
 	if t == nil {
 		return ""
 	}
