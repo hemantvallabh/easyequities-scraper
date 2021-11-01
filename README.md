@@ -2,7 +2,7 @@
 
 Work in progress....
 
-##Disclaimers
+## Disclaimers
 Before you start using this library, a few disclaimers:
 
 1. This code uses your easyequities credentials. It is the responsibility of the user of this library to secure their credentials.
